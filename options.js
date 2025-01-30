@@ -6,7 +6,7 @@ const REDIRECT_URL_KEY   = 'redirectURL';
 const CHALLENGE_TEXT_KEY = 'challengeText';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // DOM references
+  // --- DOM References ---
   const challengeDisplay   = document.getElementById('challengeDisplay');
   const challengeTextArea  = document.getElementById('challengeTextArea');
   const checkChallengeBtn  = document.getElementById('checkChallengeBtn');
@@ -23,14 +23,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const importBtn          = document.getElementById('importBtn');
   const importFileInput    = document.getElementById('importFile');
 
-  // Load existing data from storage
+  // --- Load existing data from storage ---
   let { blockedSites = [], redirectURL = '', challengeText = '' } =
     await chrome.storage.local.get([BLOCKED_SITES_KEY, REDIRECT_URL_KEY, CHALLENGE_TEXT_KEY]);
 
   // Track whether restricted actions are unlocked
   let unlocked = false;
 
-  // Render the challenge text or "No challenge text set"
+  // --- Render the challenge text or "No challenge text set" ---
   function renderChallengeText() {
     if (!challengeText) {
       challengeDisplay.textContent = 'No challenge text set';
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   renderChallengeText();
 
-  // Render the list of blocked sites
+  // --- Render the list of blocked sites ---
   function renderBlockedSites() {
     blockedSitesList.innerHTML = '';
     blockedSites.forEach((site, index) => {
@@ -68,38 +68,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Pre-fill the redirect URL field
   redirectUrlInput.value = redirectURL;
 
-  // Helper: enable/disable restricted actions
+  // --- Enable/Disable restricted actions ---
   function enableRestrictedActions(enable) {
-    // "Set Challenge" is restricted only if there's already a challenge text
-    // (Meaning, if no challenge text is set at all, user can set it freely.)
-    // But for simplicity, let's say if we're locked, we can't set a new one either.
+    // If locked => these are disabled
     setChallengeBtn.disabled  = !enable;
-
-    // "Save Redirect" is restricted
     saveRedirectBtn.disabled  = !enable;
 
-    // "Remove" site buttons
+    // Disable remove site buttons
     const removeButtons = blockedSitesList.querySelectorAll('button');
     removeButtons.forEach(btn => {
       btn.disabled = !enable;
     });
   }
 
-  // Decide initial lock state
+  // --- Decide initial lock state ---
   if (!challengeText) {
-    // No challenge => everything is unlocked by default
+    // No challenge => unlocked
     unlocked = true;
     enableRestrictedActions(true);
   } else {
-    // Challenge text is set => locked
+    // Challenge text => locked
     unlocked = false;
     enableRestrictedActions(false);
   }
 
-  // ============== CHECK CHALLENGE BUTTON ==============
+  // ========== DISABLE COPY/PASTE IN THE TEXTAREA ==========
+  challengeTextArea.addEventListener('paste',  (e) => e.preventDefault());
+  challengeTextArea.addEventListener('copy',   (e) => e.preventDefault());
+  challengeTextArea.addEventListener('cut',    (e) => e.preventDefault());
+
+  // ========== CHECK CHALLENGE BUTTON ==========
   checkChallengeBtn.addEventListener('click', () => {
-    // If no challenge is set, there's nothing to check
     if (!challengeText) {
+      // No challenge text set at all
       console.log('No challenge text is set, so no need to check.');
       alert('There is currently no challenge text set.');
       return;
@@ -120,19 +121,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       unlocked = true;
       enableRestrictedActions(true);
 
-      // Clear the textarea
-      challengeTextArea.value = '';
-
       alert('Correct! Options are now unlocked.');
     } else {
       alert('Incorrect challenge text!');
     }
   });
 
-  // ============== SET CHALLENGE BUTTON ==============
+  // ========== SET CHALLENGE BUTTON ==========
   setChallengeBtn.addEventListener('click', async () => {
-    // If no challenge text is set initially, user can set one freely
-    // But if a challenge text already exists, we must be "unlocked" first
+    // If a challenge text already exists, we must be unlocked to change it
     if (challengeText && !unlocked) return;
 
     const newText = challengeTextArea.value;
@@ -140,16 +137,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     await chrome.storage.local.set({ [CHALLENGE_TEXT_KEY]: challengeText });
 
     renderChallengeText();
-    // Optionally remain unlocked for the current session
     alert('Challenge text updated.');
-
-    // Clear the textarea after setting
-    challengeTextArea.value = '';
   });
 
-  // ============== ADD SITE (ALWAYS ALLOWED) ==============
+  // ========== ADD SITE (ALWAYS ALLOWED) ==========
   addSiteBtn.addEventListener('click', async () => {
-    // No challenge check here, user can always add
+    // No challenge check here; user can always add
     const site = newSiteInput.value.trim();
     if (site && !blockedSites.includes(site)) {
       blockedSites.push(site);
@@ -159,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ============== SAVE REDIRECT (RESTRICTED) ==============
+  // ========== SAVE REDIRECT (RESTRICTED) ==========
   saveRedirectBtn.addEventListener('click', async () => {
     if (!unlocked) return;
 
@@ -168,8 +161,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     alert('Redirect URL saved!');
   });
 
-  // ============== EXPORT (OPTIONALLY UNRESTRICTED) ==============
+  // ========== EXPORT ==========
   exportBtn.addEventListener('click', () => {
+    // If you want to restrict export, you could require unlocked. For now, always allowed.
     const dataToExport = {
       blockedSites,
       redirectURL,
@@ -187,8 +181,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     URL.revokeObjectURL(url);
   });
 
-  // ============== IMPORT (OPTIONALLY UNRESTRICTED) ==============
+  // ========== IMPORT ==========
   importBtn.addEventListener('click', () => {
+    // If you want to restrict import, you could add if (!unlocked) return;
     importFileInput.click();
   });
 

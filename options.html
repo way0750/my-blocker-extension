@@ -19,6 +19,13 @@
       padding: 20px;
     }
 
+    #challengeDisplay {
+      user-select: none;       /* standard property */
+      -webkit-user-select: none; /* for older Safari/Chrome */
+      -moz-user-select: none;    /* for older Firefox */
+      -ms-user-select: none;     /* for older Edge/IE */
+    }
+
     .container {
       max-width: 600px;
       margin: 0 auto;
@@ -41,12 +48,24 @@
       margin-bottom: 10px;
     }
 
-    h1 {
-      font-size: 24px;
-      font-weight: 700;
+    /* Header area with icon + title (optional) */
+    .header {
       text-align: center;
       margin-bottom: 20px;
+    }
+
+    .header-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 24px;
+      font-weight: 700;
       color: #000;
+    }
+
+    .header-title img {
+      width: 32px;
+      height: 32px;
     }
 
     .section p {
@@ -90,7 +109,6 @@
     /* Buttons: smaller size */
     button {
       display: inline-block;
-      /* Reduced font size and padding */
       font-size: 14px;
       padding: 6px 12px;
       border-radius: 8px;
@@ -127,7 +145,7 @@
       justify-content: space-between;
       padding: 8px 0;
       border-bottom: 1px solid #EFEFEF;
-      font-size: 16px; /* Increase font size to "medium" */
+      font-size: 16px; /* Increase font size */
     }
 
     #blockedSitesList li:last-child {
@@ -138,7 +156,7 @@
       margin: 0; 
     }
 
-    /* Slightly larger text with a grey background for the challenge text display */
+    /* Slightly larger text with grey background for the challenge text display */
     #challengeDisplay {
       background-color: #E8E8E8;
       padding: 6px 8px;
@@ -155,18 +173,22 @@
 </head>
 <body>
   <div class="container">
-    <h1>Blocker Options</h1>
+
+    <!-- Header (optional icon) -->
+    <div class="header">
+      <div class="header-title">
+        <!-- Example: <img src="icon.png" alt="Blocker Icon"> -->
+        <span>Blocker Options</span>
+      </div>
+    </div>
 
     <!-- Challenge Section -->
     <div class="section">
       <h2>Challenge Text</h2>
-      <!-- Larger text with slight grey background for existing challenge -->
       <p id="challengeDisplay">No challenge text set</p>
-
-      <!-- Single textarea for both setting/updating AND confirming the challenge text -->
+      
       <textarea id="challengeTextArea" placeholder="Type challenge text here"></textarea>
 
-      <!-- Two buttons: check/unlock and set/change the challenge text -->
       <button id="checkChallengeBtn">Check Challenge</button>
       <button id="setChallengeBtn">Set Challenge Text</button>
     </div>
@@ -198,6 +220,8 @@
     </div>
   </div>
 
+  <!-- Main logic file for your extension's functionality -->
   <script src="options.js"></script>
+
 </body>
 </html>
