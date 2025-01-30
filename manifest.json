@@ -1,0 +1,32 @@
+{
+    "name": "My Blocker Extension",
+    "version": "1.2",
+    "manifest_version": 3,
+    "description": "Blocks or redirects user-specified websites. If no redirect is specified, show a custom block page.",
+    "permissions": [
+      "storage",
+      "declarativeNetRequest"
+    ],
+    "host_permissions": [
+      "<all_urls>"
+    ],
+    "options_page": "options.html",
+    "background": {
+      "service_worker": "service-worker.js"
+    },
+    "declarative_net_request": {
+      "rule_resources": [
+        {
+          "id": "ruleset_1",
+          "enabled": true,
+          "path": "rules.json"
+        }
+      ]
+    },
+    "web_accessible_resources": [
+      {
+        "resources": ["blocked.html"],
+        "matches": ["<all_urls>"]
+      }
+    ]
+  }
