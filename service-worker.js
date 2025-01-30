@@ -59,3 +59,6 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 // On install or startup
 chrome.runtime.onInstalled.addListener(updateBlockingRules);
 chrome.runtime.onStartup.addListener(updateBlockingRules);
+chrome.action.onClicked.addListener(() => {
+  chrome.runtime.openOptionsPage();
+});
