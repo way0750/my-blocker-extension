@@ -1,43 +1,46 @@
-const BLOCKED_SITES_KEY = 'blockedSites';
-const REDIRECT_URL_KEY = 'redirectURL';
+// options.js
+
+// Keys for storage
+const BLOCKED_SITES_KEY  = 'blockedSites';
+const REDIRECT_URL_KEY   = 'redirectURL';
 const CHALLENGE_TEXT_KEY = 'challengeText';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Get references to UI elements
-  const challengeDisplay = document.getElementById('challengeDisplay');
-  const challengeTextArea = document.getElementById('challengeText');
-  const setChallengeBtn = document.getElementById('setChallengeBtn');
-  const challengeConfirm = document.getElementById('challengeConfirm');
+  // DOM references
+  const challengeDisplay   = document.getElementById('challengeDisplay');
+  const challengeTextArea  = document.getElementById('challengeTextArea');
+  const checkChallengeBtn  = document.getElementById('checkChallengeBtn');
+  const setChallengeBtn    = document.getElementById('setChallengeBtn');
 
-  const newSiteInput = document.getElementById('newSite');
-  const addSiteBtn = document.getElementById('addSiteBtn');
-  const blockedSitesList = document.getElementById('blockedSitesList');
+  const newSiteInput       = document.getElementById('newSite');
+  const addSiteBtn         = document.getElementById('addSiteBtn');
+  const blockedSitesList   = document.getElementById('blockedSitesList');
 
-  const redirectUrlInput = document.getElementById('redirectUrlInput');
-  const saveRedirectBtn = document.getElementById('saveRedirectBtn');
+  const redirectUrlInput   = document.getElementById('redirectUrlInput');
+  const saveRedirectBtn    = document.getElementById('saveRedirectBtn');
 
-  const exportBtn = document.getElementById('exportBtn');
-  const importBtn = document.getElementById('importBtn');
-  const importFileInput = document.getElementById('importFile');
+  const exportBtn          = document.getElementById('exportBtn');
+  const importBtn          = document.getElementById('importBtn');
+  const importFileInput    = document.getElementById('importFile');
 
-  // Load from storage
-  let {
-    blockedSites = [],
-    redirectURL = '',
-    challengeText = ''
-  } = await chrome.storage.local.get([BLOCKED_SITES_KEY, REDIRECT_URL_KEY, CHALLENGE_TEXT_KEY]);
+  // Load existing data from storage
+  let { blockedSites = [], redirectURL = '', challengeText = '' } =
+    await chrome.storage.local.get([BLOCKED_SITES_KEY, REDIRECT_URL_KEY, CHALLENGE_TEXT_KEY]);
 
-  // Display the current challenge text
+  // Track whether restricted actions are unlocked
+  let unlocked = false;
+
+  // Render the challenge text or "No challenge text set"
   function renderChallengeText() {
-    if (challengeText) {
-      challengeDisplay.textContent = challengeText;
-    } else {
+    if (!challengeText) {
       challengeDisplay.textContent = 'No challenge text set';
+    } else {
+      challengeDisplay.textContent = challengeText;
     }
   }
   renderChallengeText();
 
-  // Render the blocked sites
+  // Render the list of blocked sites
   function renderBlockedSites() {
     blockedSitesList.innerHTML = '';
     blockedSites.forEach((site, index) => {
@@ -47,11 +50,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const removeBtn = document.createElement('button');
       removeBtn.textContent = 'Remove';
       removeBtn.style.marginLeft = '10px';
-      removeBtn.addEventListener('click', async () => {
-        // Require challenge match (if challengeText is set)
-        if (!checkChallenge()) return;
 
-        // Remove this site
+      // Removing a site is restricted (needs to be unlocked)
+      removeBtn.addEventListener('click', async () => {
+        if (!unlocked) return; // do nothing if locked
         blockedSites.splice(index, 1);
         await chrome.storage.local.set({ [BLOCKED_SITES_KEY]: blockedSites });
         renderBlockedSites();
@@ -63,49 +65,91 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   renderBlockedSites();
 
-  // Set the redirect URL field
+  // Pre-fill the redirect URL field
   redirectUrlInput.value = redirectURL;
 
-  // Helper: Check if the challenge text is set and, if so, verify user input
-  function checkChallenge() {
-    // If there's no challenge text set, no need to check
-    if (!challengeText) return true;
+  // Helper: enable/disable restricted actions
+  function enableRestrictedActions(enable) {
+    // "Set Challenge" is restricted only if there's already a challenge text
+    // (Meaning, if no challenge text is set at all, user can set it freely.)
+    // But for simplicity, let's say if we're locked, we can't set a new one either.
+    setChallengeBtn.disabled  = !enable;
 
-    // If challenge text is set, user must have typed it EXACTLY in challengeConfirm
-    const userEntry = (challengeConfirm.value || '').trim();
-    if (userEntry === challengeText) {
-      return true; // matched
-    }
+    // "Save Redirect" is restricted
+    saveRedirectBtn.disabled  = !enable;
 
-    alert('Challenge text does not match. Action not allowed.');
-    return false;
+    // "Remove" site buttons
+    const removeButtons = blockedSitesList.querySelectorAll('button');
+    removeButtons.forEach(btn => {
+      btn.disabled = !enable;
+    });
   }
 
-  // 1) Set Challenge Text
-  setChallengeBtn.addEventListener('click', async () => {
-    // If there's an existing challenge text, must match it first to change it
-    if (challengeText) {
-      if (!checkChallenge()) return;
+  // Decide initial lock state
+  if (!challengeText) {
+    // No challenge => everything is unlocked by default
+    unlocked = true;
+    enableRestrictedActions(true);
+  } else {
+    // Challenge text is set => locked
+    unlocked = false;
+    enableRestrictedActions(false);
+  }
+
+  // ============== CHECK CHALLENGE BUTTON ==============
+  checkChallengeBtn.addEventListener('click', () => {
+    // If no challenge is set, there's nothing to check
+    if (!challengeText) {
+      console.log('No challenge text is set, so no need to check.');
+      alert('There is currently no challenge text set.');
+      return;
     }
-    
-    // Now set a new challenge text
-    const newText = challengeTextArea.value.trim();
-    challengeText = newText; // update in memory
-    await chrome.storage.local.set({ [CHALLENGE_TEXT_KEY]: challengeText });
 
-    // Clear out the text area after setting
-    challengeTextArea.value = '';
-    // Re-render
-    renderChallengeText();
+    // If already unlocked, do nothing
+    if (unlocked) {
+      console.log('Already unlocked. No need to check challenge again.');
+      return;
+    }
 
-    alert('Challenge text updated.');
+    const userTyped = challengeTextArea.value;
+    console.log('User typed:', userTyped);
+    console.log('Actual challenge text:', challengeText);
+
+    if (userTyped === challengeText) {
+      // Correct => unlock everything
+      unlocked = true;
+      enableRestrictedActions(true);
+
+      // Clear the textarea
+      challengeTextArea.value = '';
+
+      alert('Correct! Options are now unlocked.');
+    } else {
+      alert('Incorrect challenge text!');
+    }
   });
 
-  // 2) Add a new site
-  addSiteBtn.addEventListener('click', async () => {
-    // (If you want to protect adding sites, require challenge match)
-    // if (!checkChallenge()) return;
+  // ============== SET CHALLENGE BUTTON ==============
+  setChallengeBtn.addEventListener('click', async () => {
+    // If no challenge text is set initially, user can set one freely
+    // But if a challenge text already exists, we must be "unlocked" first
+    if (challengeText && !unlocked) return;
 
+    const newText = challengeTextArea.value;
+    challengeText = newText;
+    await chrome.storage.local.set({ [CHALLENGE_TEXT_KEY]: challengeText });
+
+    renderChallengeText();
+    // Optionally remain unlocked for the current session
+    alert('Challenge text updated.');
+
+    // Clear the textarea after setting
+    challengeTextArea.value = '';
+  });
+
+  // ============== ADD SITE (ALWAYS ALLOWED) ==============
+  addSiteBtn.addEventListener('click', async () => {
+    // No challenge check here, user can always add
     const site = newSiteInput.value.trim();
     if (site && !blockedSites.includes(site)) {
       blockedSites.push(site);
@@ -115,20 +159,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 3) Save Redirect URL
+  // ============== SAVE REDIRECT (RESTRICTED) ==============
   saveRedirectBtn.addEventListener('click', async () => {
-    if (!checkChallenge()) return;
+    if (!unlocked) return;
 
     const newRedirect = redirectUrlInput.value.trim();
     await chrome.storage.local.set({ [REDIRECT_URL_KEY]: newRedirect });
     alert('Redirect URL saved!');
   });
 
-  // 4) Export
+  // ============== EXPORT (OPTIONALLY UNRESTRICTED) ==============
   exportBtn.addEventListener('click', () => {
-    // Optionally, require challenge to export
-    // if (!checkChallenge()) return;
-
     const dataToExport = {
       blockedSites,
       redirectURL,
@@ -146,11 +187,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     URL.revokeObjectURL(url);
   });
 
-  // 5) Import
+  // ============== IMPORT (OPTIONALLY UNRESTRICTED) ==============
   importBtn.addEventListener('click', () => {
-    // Optionally, require challenge to import
-    // if (!checkChallenge()) return;
-
     importFileInput.click();
   });
 
@@ -163,12 +201,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const importedData = JSON.parse(evt.target.result);
         if (importedData && Array.isArray(importedData.blockedSites)) {
-          // If challenge is set, require challenge to overwrite
-          if (!checkChallenge()) return;
-
           blockedSites = importedData.blockedSites;
-          redirectURL = importedData.redirectURL || '';
-          challengeText = importedData.challengeText || '';
+          redirectURL  = importedData.redirectURL || '';
+          challengeText= importedData.challengeText || '';
 
           await chrome.storage.local.set({
             [BLOCKED_SITES_KEY]: blockedSites,
@@ -176,19 +211,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             [CHALLENGE_TEXT_KEY]: challengeText
           });
 
-          // Refresh UI
+          // Re-render
           renderBlockedSites();
           redirectUrlInput.value = redirectURL;
           renderChallengeText();
 
+          // If a challenge text was imported, lock unless it's empty
+          if (challengeText) {
+            unlocked = false;
+            enableRestrictedActions(false);
+          } else {
+            unlocked = true;
+            enableRestrictedActions(true);
+          }
+
           alert('Import successful!');
         } else {
-          alert('Invalid file format. Must contain { blockedSites: [], redirectURL: "", challengeText: "" }');
+          alert('Invalid file format. Must have { blockedSites: [], redirectURL: "", challengeText: "" }');
         }
       } catch (err) {
         alert('Error reading or parsing file. Make sure it’s valid JSON.');
       }
-      importFileInput.value = null; // reset input
+      importFileInput.value = null; // reset
     };
     reader.readAsText(file);
   });

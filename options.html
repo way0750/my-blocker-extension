@@ -4,64 +4,198 @@
   <meta charset="utf-8">
   <title>My Blocker Extension Options</title>
   <style>
+    /* Basic reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Body: subtle off-white background, iOS-like font, spacing */
     body {
-      font-family: sans-serif;
-      margin: 20px;
+      background-color: #F2F2F7; /* iOS-like background tone */
+      color: #1C1C1E;            /* Dark text on light background */
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 20px;
     }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* White card sections */
     .section {
+      background-color: #FFFFFF;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       margin-bottom: 20px;
+      padding: 20px;
     }
-    #blockedSitesList li {
-      margin-bottom: 5px;
+
+    .section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #000;
+      margin-bottom: 10px;
     }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #000;
+    }
+
+    .section p {
+      margin-bottom: 10px;
+      line-height: 1.4;
+      color: #3A3A3C; /* Slightly lighter than pure black */
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #1C1C1E;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #D1D1D6;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      color: #1C1C1E;
+      outline: none;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 60px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #D1D1D6;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-family: inherit;
+      resize: vertical;
+      color: #1C1C1E;
+      outline: none;
+    }
+
+    /* Buttons: smaller size */
     button {
-      margin: 5px 0;
+      display: inline-block;
+      /* Reduced font size and padding */
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: none;
+      background: #007AFF; /* iOS-blue */
+      color: #FFFFFF;
+      cursor: pointer;
+      font-weight: 500;
+      margin-right: 8px;
+      transition: background 0.2s ease;
+    }
+
+    button:hover {
+      background: #005BB5;
+    }
+
+    /* Disabled buttons: grey background, no hover, no pointer events */
+    button:disabled {
+      background: #CCC;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* List of blocked sites: bigger font */
+    #blockedSitesList {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    #blockedSitesList li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #EFEFEF;
+      font-size: 16px; /* Increase font size to "medium" */
+    }
+
+    #blockedSitesList li:last-child {
+      border-bottom: none;
+    }
+
+    #blockedSitesList li button {
+      margin: 0; 
+    }
+
+    /* Slightly larger text with a grey background for the challenge text display */
+    #challengeDisplay {
+      background-color: #E8E8E8;
+      padding: 6px 8px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    #importFile {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <h1>Blocker Options</h1>
+  <div class="container">
+    <h1>Blocker Options</h1>
 
-  <!-- Challenge Text Section -->
-  <div class="section">
-    <h2>Challenge Text</h2>
-    <!-- Display the current challenge text here -->
-    <p id="challengeDisplay">No challenge text set</p>
-    
-    <textarea id="challengeText" rows="3" placeholder="Enter your challenge text here"></textarea>
-    <br>
-    <button id="setChallengeBtn">Set Challenge Text</button>
-  </div>
+    <!-- Challenge Section -->
+    <div class="section">
+      <h2>Challenge Text</h2>
+      <!-- Larger text with slight grey background for existing challenge -->
+      <p id="challengeDisplay">No challenge text set</p>
 
-  <!-- This is the 'proof' input to confirm the challenge before doing restricted actions -->
-  <div class="section">
-    <label for="challengeConfirm">Enter Challenge Text to Confirm Changes:</label><br>
-    <input type="text" id="challengeConfirm" placeholder="Exact match required">
-  </div>
+      <!-- Single textarea for both setting/updating AND confirming the challenge text -->
+      <textarea id="challengeTextArea" placeholder="Type challenge text here"></textarea>
 
-  <div class="section">
-    <label for="newSite">Add a site to block or redirect:</label><br>
-    <input type="text" id="newSite" placeholder="e.g. example.com">
-    <button id="addSiteBtn">Add</button>
-  </div>
+      <!-- Two buttons: check/unlock and set/change the challenge text -->
+      <button id="checkChallengeBtn">Check Challenge</button>
+      <button id="setChallengeBtn">Set Challenge Text</button>
+    </div>
 
-  <div class="section">
-    <h2>Blocked Sites</h2>
-    <ul id="blockedSitesList"></ul>
-  </div>
+    <!-- Blocked Sites Section -->
+    <div class="section">
+      <h2>Blocked Sites</h2>
+      <ul id="blockedSitesList"></ul>
 
-  <div class="section">
-    <h2>Redirect URL</h2>
-    <p>If set, visits to any blocked site will automatically redirect here.</p>
-    <input type="text" id="redirectUrlInput" placeholder="e.g. https://www.google.com">
-    <button id="saveRedirectBtn">Save Redirect URL</button>
-  </div>
+      <label for="newSite">Add a site to block or redirect:</label>
+      <input type="text" id="newSite" placeholder="e.g. example.com">
+      <button id="addSiteBtn">Add</button>
+    </div>
 
-  <div class="section">
-    <h2>Export/Import</h2>
-    <button id="exportBtn">Export List</button>
-    <button id="importBtn">Import List</button>
-    <input type="file" id="importFile" accept=".json" style="display: none;">
+    <!-- Redirect URL Section -->
+    <div class="section">
+      <h2>Redirect URL</h2>
+      <p>If set, visits to any blocked site will automatically redirect here.</p>
+      <input type="text" id="redirectUrlInput" placeholder="e.g. https://www.google.com">
+      <button id="saveRedirectBtn">Save Redirect URL</button>
+    </div>
+
+    <!-- Export/Import Section -->
+    <div class="section">
+      <h2>Export/Import</h2>
+      <button id="exportBtn">Export List</button>
+      <button id="importBtn">Import List</button>
+      <input type="file" id="importFile" accept=".json">
+    </div>
   </div>
 
   <script src="options.js"></script>
